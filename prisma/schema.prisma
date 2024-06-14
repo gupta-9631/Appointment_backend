@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  phone_number  String?
+  password      String
+  appointments  Appointment[]  // Renamed from `Appointment` to `appointments`
+}
+
+model Appointment {
+  appointment_id     Int              @id @default(autoincrement())
+  user               User?            @relation(fields: [user_id], references: [id])
+  user_id            Int?             // Nullable foreign key
+  appointment_date   DateTime
+  appointment_time   DateTime
+  status             AppointmentStatus @default(available) // Default value added
+  slots              Slot[]           // Relation to Slot model
+}
+
+model Slot {
+  id               Int             @id @default(autoincrement())
+  start_time       DateTime
+  end_time         DateTime
+  availability     SlotAvailability
+  appointment      Appointment?    @relation(fields: [appointmentId], references: [appointment_id])
+  appointmentId    Int?            // Nullable foreign key
+}
+
+enum AppointmentStatus {
+  available
+  reserved
+  canceled
+}
+
+enum SlotAvailability {
+  available
+  reserved
+  canceled
+}
