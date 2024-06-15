@@ -25,6 +25,7 @@ model Appointment {
   appointment_id     Int              @id @default(autoincrement())
   user               User?            @relation(fields: [user_id], references: [id])
   user_id            Int?             // Nullable foreign key
+  slot_id            Int?
   appointment_date   DateTime
   appointment_time   DateTime
   status             AppointmentStatus @default(available) // Default value added
