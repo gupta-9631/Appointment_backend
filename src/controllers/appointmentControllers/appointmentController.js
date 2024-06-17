@@ -35,7 +35,6 @@ async function createAppointment(req, res) {
       },
     });
 
-    // Update slot availability
     await prisma.slot.update({
       where: { id: slotId },
       data: {
@@ -166,27 +165,18 @@ const sendEmailNotification = (userEmail, appointmentTime) => {
   });
 };
 
-const calculateTimeDifference = (appointmentTime) => {
-  // Current time in UTC
+const calculateTimeDifference = (dateString) => {
+  const givenTime = new Date(dateString);
   const currentTime = new Date();
 
-  // Parse appointment time
-  const appointmentDate = new Date(appointmentTime);
+  const millisecondsDiff = givenTime.getTime() - currentTime.getTime();
 
-  // Calculate the time difference in milliseconds
-  const differenceInMilliseconds =
-    appointmentDate.getTime() - currentTime.getTime();
+  const minutesDiff = Math.floor(millisecondsDiff / (1000 * 60));
 
-  // Convert milliseconds to minutes
-  const differenceInMinutes = Math.floor(
-    differenceInMilliseconds / (1000 * 60)
-  );
-
-  return differenceInMinutes;
+  return minutesDiff;
 };
 
-// console.log(calculateTimeDifference("2024-06-16 00:10:00"));
-
+const sentEmails = new Set();
 async function sendMailNotification(req, res) {
   try {
     const checkUsersAppointment = await prisma.appointment.findMany({
@@ -206,14 +196,16 @@ async function sendMailNotification(req, res) {
         const timeDifference = calculateTimeDifference(
           appointment.appointment_time
         );
-        console.log(
-          `Time difference for user ${user.id}: ${timeDifference} minutes`
-        );
-        console.log(appointment.appointment_time);
 
-        // if (timeDifference <= 30 && timeDifference > 0) {
-        //   sendEmailNotification(user.email, appointment.appointment_time);
-        // }
+        if (
+          timeDifference <= 30 &&
+          timeDifference > 0 &&
+          !sentEmails.has(appointment.appointment_id)
+        ) {
+          sendEmailNotification(user.email, appointment.appointment_time);
+
+          sentEmails.add(appointment.appointment_id);
+        }
       }
     }
   } catch (error) {
@@ -221,10 +213,9 @@ async function sendMailNotification(req, res) {
   }
 }
 
-// cron.schedule("* * * * *", () => {
-//   console.log("Running sendMailNotification job...");
-sendMailNotification();
-// });
+cron.schedule("* * * * *", () => {
+  sendMailNotification();
+});
 
 module.exports = {
   getAvailableSlots,
